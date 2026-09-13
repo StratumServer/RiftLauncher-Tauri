@@ -11,3 +11,4 @@ build-dir
 
 # Rust host
 src-tauri/target
+src-tauri/gen/schemas

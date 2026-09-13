@@ -28,7 +28,7 @@ module.exports = {
             patterns: [
               { group: ["node:*"], message: "src/domain must stay free of Node built-ins. Add a port instead." },
               { group: ["electron/*"], message: "src/domain must stay free of Electron. Add a port instead." },
-              { group: ["@renderer/*", "@src/ipc/*"], message: "src/domain must not depend on the renderer or the IPC layer." }
+              { group: ["@renderer/*"], message: "src/domain must not depend on the renderer or the host layer." }
             ]
           }
         ]

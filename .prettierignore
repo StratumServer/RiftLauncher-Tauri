@@ -8,3 +8,4 @@ tsconfig.*.json
 # Release bodies captured verbatim from GitHub, the input the release notes tests reduce.
 # Reformatting them would mean testing against notes nobody published.
 tests/fixtures/releaseNotes
+src-tauri/target

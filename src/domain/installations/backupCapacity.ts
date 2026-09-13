@@ -11,6 +11,23 @@
  * the log anyway, and a size is the part that tells someone what to do next.
  */
 
+/**
+ * The ceiling a backup archive is held to, and the ceiling every other archive is.
+ *
+ * Backups get their own number rather than reusing the generic one, because the
+ * generic one is sized against hostile input: a mod archive or a game build
+ * arrives over the network and 2 GiB is already generous for one. A backup is
+ * the launcher compressing a folder the player already has on their own disk,
+ * and 64 GiB is several times the largest installation anyone has reported, so
+ * it is a bound rather than no bound at all. It also keeps the promise the
+ * compress and restore sides make each other: an archive the launcher agrees to
+ * write is one it will still agree to read back.
+ */
+export const MAX_BACKUP_TOTAL_BYTES = 64 * 1024 * 1024 * 1024
+
+/** The ceiling every archive that is not a backup is held to. See {@link MAX_BACKUP_TOTAL_BYTES}. */
+export const MAX_ARCHIVE_TOTAL_BYTES = 2 * 1024 * 1024 * 1024
+
 const BYTE_UNITS = ["B", "KB", "MB", "GB", "TB"] as const
 const TAR_BLOCK_BYTES = 512
 const TAR_BLOCKS_PER_ENTRY = 4

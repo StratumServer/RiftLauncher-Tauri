@@ -1,24 +1,35 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "extends": "./tsconfig.node.json",
-  "include": ["tests/**/*", "src/global.d.ts", "src/preload/preload.d.ts", "src/write-file-atomic.d.ts"],
-  "exclude": ["tests/e2e/**"],
+  "extends": "./tsconfig.web.json",
+  "include": [
+    "tests/**/*",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "src/api.d.ts",
+    "src/global.d.ts"
+  ],
   "compilerOptions": {
     "composite": false,
     "noEmit": true,
     "jsx": "react-jsx",
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    // "electron-vite/node" (not just "node"): tests/ipc/pathsHandlers.test.ts
-    // imports src/ipc/handlers/pathsHandlers.ts, which imports its worker
-    // modules with the `?modulePath` suffix electron-vite's own build
-    // resolves specially. tsconfig.node.json's "types" already includes it;
-    // extending here would otherwise still override rather than merge it.
-    "types": ["node", "electron-vite/node"],
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": [
+      "node"
+    ],
     "baseUrl": ".",
     "paths": {
-      "@src/*": ["src/*"],
-      "@domain/*": ["src/domain/*"],
-      "@renderer/*": ["src/renderer/src/*"]
-    }
+      "@domain/*": [
+        "src/domain/*"
+      ],
+      "@renderer/*": [
+        "src/renderer/src/*"
+      ]
+    },
+    "module": "ESNext",
+    "moduleResolution": "bundler"
   }
 }

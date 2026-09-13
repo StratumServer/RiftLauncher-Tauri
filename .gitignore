@@ -8,3 +8,6 @@ repo
 .flatpak-builder
 build-dir
 *.tsbuildinfo
+
+# Rust host
+src-tauri/target

@@ -1,8 +1,14 @@
 import assert from "node:assert/strict"
 import { describe, it } from "vitest"
 
-import { describeBackupSpaceShortfall, describeOversizedBackupSource, estimateBackupArchiveBytes, formatByteSize } from "@domain/installations/backupCapacity"
-import { MAX_ARCHIVE_TOTAL_BYTES, MAX_BACKUP_TOTAL_BYTES } from "@src/ipc/validation"
+import {
+  describeBackupSpaceShortfall,
+  describeOversizedBackupSource,
+  estimateBackupArchiveBytes,
+  formatByteSize,
+  MAX_ARCHIVE_TOTAL_BYTES,
+  MAX_BACKUP_TOTAL_BYTES
+} from "@domain/installations/backupCapacity"
 
 /**
  * The two size decisions a backup makes, as plain arithmetic.

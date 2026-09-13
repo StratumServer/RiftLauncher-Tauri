@@ -575,6 +575,15 @@ mod tests {
         entries.iter().map(|entry| entry.to_string()).collect()
     }
 
+    /// The game file, spelled the way this platform spells it.
+    ///
+    /// `build_plan` reaches it with `Path::join`, so an expectation written with a
+    /// forward slash only matches on Unix. Joining here too keeps these tests about
+    /// the launch rules rather than about the separator the host happens to use.
+    fn game(folder: &str, name: &str) -> String {
+        Path::new(folder).join(name).to_string_lossy().into_owned()
+    }
+
     #[test]
     fn the_native_linux_launcher_runs_directly_with_the_data_path_and_the_start_parameters() {
         let plan = build_plan(
@@ -588,7 +597,7 @@ mod tests {
         )
         .expect("a plan");
 
-        assert_eq!(plan.command, "/versions/1.20.0/Vintagestory");
+        assert_eq!(plan.command, game("/versions/1.20.0", "Vintagestory"));
         assert_eq!(
             plan.args,
             vec!["--dataPath=/installs/survival", "--openWorld"]
@@ -642,8 +651,18 @@ mod tests {
         .expect("a plan");
 
         assert_eq!(plan.command, "mono");
-        assert_eq!(plan.args, vec!["/v/Vintagestory.exe", "--dataPath=/i", ""]);
-        assert_eq!(plan.executable_path, Path::new("/v/Vintagestory.exe"));
+        assert_eq!(
+            plan.args,
+            vec![
+                game("/v", "Vintagestory.exe"),
+                "--dataPath=/i".to_string(),
+                String::new()
+            ]
+        );
+        assert_eq!(
+            plan.executable_path,
+            Path::new("/v").join("Vintagestory.exe")
+        );
     }
 
     #[test]
@@ -702,7 +721,14 @@ mod tests {
         .expect("a plan");
 
         assert_eq!(plan.command, "/usr/bin/gamemoderun");
-        assert_eq!(plan.args, vec!["/v/Vintagestory", "--dataPath=/i", ""]);
+        assert_eq!(
+            plan.args,
+            vec![
+                game("/v", "Vintagestory"),
+                "--dataPath=/i".to_string(),
+                String::new()
+            ]
+        );
     }
 
     #[test]
@@ -717,7 +743,7 @@ mod tests {
             "C:\\wrap.exe",
         )
         .expect("a plan");
-        assert_eq!(plan.command, "/v/Vintagestory.exe");
+        assert_eq!(plan.command, game("/v", "Vintagestory.exe"));
     }
 
     #[test]

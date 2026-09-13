@@ -9,39 +9,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  # typecheck and lint run tsc, eslint and prettier. None of them launches
-  # Electron, so neither job needs the platform binary that `npm ci`'s
-  # postinstall would otherwise fetch from the download mirror. Skipping it
-  # means a mirror hiccup can no longer fail a job whose only work is static
-  # analysis (issue #377). The test-matrix and build jobs keep the download.
-  typecheck:
-    runs-on: ubuntu-latest
-    env:
-      ELECTRON_SKIP_BINARY_DOWNLOAD: 1
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run typecheck
-
-  lint:
-    runs-on: ubuntu-latest
-    env:
-      ELECTRON_SKIP_BINARY_DOWNLOAD: 1
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run lint:ci
-      - run: npm run format:check
-
-  test-matrix:
+  # Both halves of the launcher in one job, on both platforms it ships on. They
+  # are together rather than split because they share a checkout and an npm
+  # install, and because a Rust change that breaks the front (or the other way
+  # round) should turn one leg red rather than two unrelated ones.
+  checks:
     strategy:
       fail-fast: false
       matrix:
@@ -49,31 +21,107 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npm run test:coverage
 
-  # `dev` branch protection requires a context literally named `test`, and a
-  # matrixed job can't produce one: it reports `test (ubuntu-latest)` and
-  # `test (windows-latest)` instead. This job keeps the required name alive.
-  # `always()` makes it run even when a leg fails (without it the gate would be
-  # skipped, and protection counts a skipped required job as satisfied), and
-  # the explicit comparison fails the gate unless every leg succeeded, so a
-  # failed, cancelled or skipped matrix turns it red.
-  test:
-    needs: [test-matrix]
-    if: always()
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # WebKitGTK and its neighbours are what the Rust host links against on
+      # Linux. Windows builds against the WebView2 runtime the image already has.
+      - name: Install the Linux host libraries
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev \
+            patchelf
+
+      - run: npm ci
+
+      - run: npm run typecheck
+      - run: npm run lint:ci
+      - run: npm run format:check
+      - run: npx vitest run
+
+      - name: cargo fmt
+        run: cargo fmt --all --check
+        working-directory: src-tauri
+
+      - name: cargo clippy
+        run: cargo clippy --all-targets -- -D warnings
+        working-directory: src-tauri
+
+      - name: cargo test
+        run: cargo test
+        working-directory: src-tauri
+
+      - name: cargo build
+        run: cargo build
+        working-directory: src-tauri
+
+  # Linux only for now. The Windows bundle needs its own installer decisions
+  # (WiX or NSIS, and what to do about the existing installer's upgrade path),
+  # which is a separate piece of work from proving the host bundles at all.
+  bundle:
     runs-on: ubuntu-latest
     steps:
-      - run: |
-          echo "test-matrix result: ${{ needs.test-matrix.result }}"
-          [ "${{ needs.test-matrix.result }}" = "success" ]
+      - uses: actions/checkout@v4
 
-  # Informational quality scan: never blocks a merge, so a SonarCloud outage
-  # or configuration change can't turn the whole run red.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install the Linux host libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev \
+            patchelf \
+            rpm
+
+      - run: npm ci
+      - run: npm run build
+      # The CLI comes from the @tauri-apps/cli devDependency, so the bundle is
+      # built by the same version the lockfile pins rather than by whatever a
+      # separate cargo install happened to fetch.
+      - run: npm run tauri -- build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: riftlauncher-linux-bundles
+          if-no-files-found: error
+          path: |
+            src-tauri/target/release/bundle/appimage/*.AppImage
+            src-tauri/target/release/bundle/deb/*.deb
+
+  # Informational quality scan: never blocks a merge, so a SonarCloud outage or
+  # configuration change cannot turn the whole run red.
   sonarcloud:
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     continue-on-error: true
@@ -91,39 +139,3 @@ jobs:
       - uses: SonarSource/sonarqube-scan-action@v8
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    env:
-      CSC_IDENTITY_AUTO_DISCOVERY: false
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run build:unpack
-
-  # macos-latest bills Actions minutes at a 10x multiplier and the launcher
-  # can't launch the game on macOS yet, so this build is manual-only.
-  build-macos:
-    if: github.event_name == 'workflow_dispatch'
-    strategy:
-      matrix:
-        os: [macos-latest]
-    runs-on: ${{ matrix.os }}
-    env:
-      CSC_IDENTITY_AUTO_DISCOVERY: false
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run build:unpack

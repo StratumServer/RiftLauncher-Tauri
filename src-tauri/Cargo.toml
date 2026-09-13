@@ -1,0 +1,30 @@
+[package]
+name = "riftlauncher"
+version = "1.7.0-beta.10"
+description = "RiftLauncher for Vintage Story"
+authors = ["Zaldaryon"]
+license = "GPL-3.0-only"
+repository = "https://github.com/StratumServer/RiftLauncher-Tauri"
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "riftlauncher_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+# The launcher ships as a desktop application, not as a library anyone links
+# against: size and a clean backtrace are worth more here than the last few
+# percent of speed.
+panic = "abort"
+strip = true
+lto = true
+opt-level = "s"

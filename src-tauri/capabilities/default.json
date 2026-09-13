@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "What the launcher window may reach. The three commands this host defines are application commands, which the access control list does not gate; what is listed here is the core surface the window itself needs to exist and to carry an invoke back to the page. Everything else core offers (the tray, the menu, image and resource handles, the path API) is left out, because nothing on the front asks for it.",
+  "windows": ["main"],
+  "permissions": ["core:event:default", "core:window:default", "core:webview:default"]
+}

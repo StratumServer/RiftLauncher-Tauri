@@ -1,5 +1,8 @@
 # Architecture
 
+> [!WARNING]
+> This page still describes the Electron host, which this repository no longer has. The renderer and `src/domain` sections are accurate; everything about the main process, the preload bridge and `src/ipc` describes [StratumServer/RiftLauncher](https://github.com/StratumServer/RiftLauncher) instead. The host side of this repository is `src-tauri`, and the bridge is `src/renderer/src/host/tauriApi.ts`. Rewriting this page waits until the host stops being a skeleton.
+
 This is the map for a new contributor who knows TypeScript but has never opened this repository. It describes how the code is actually layered today, not how a launcher in general could be layered. Every claim below was checked against the source at the path given; if the code moves, trust the code over this page and file a correction.
 
 RiftLauncher is an Electron 44 + React 18 app. The trusted side (main process) owns the file system, the network, and the game process. The renderer owns the UI and talks to the trusted side only through a preload bridge. In between sits `src/domain`, a layer that knows the launcher's rules without knowing Electron exists.

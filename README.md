@@ -1,53 +1,51 @@
 > [!WARNING]
-> **RiftLauncher is in active development.** A beta prerelease is available on the [releases page](https://github.com/StratumServer/RiftLauncher/releases) for early testing: expect rough edges and breaking changes while the team keeps rebuilding the launcher. Back up your worlds before pointing it at an existing installation, and report anything odd on the issues page or the Discord.
+> **This repository is an experiment, not a release.** It is the Tauri rewrite of the RiftLauncher host, and it is not the launcher anyone should be running. Downloads and support live at [StratumServer/RiftLauncher](https://github.com/StratumServer/RiftLauncher).
 
-> [!NOTE]
-> This fork is maintained by [Zaldaryon](https://github.com/Zaldaryon) and the [Stratum](https://github.com/StratumServer) team.
-> For general support, join the [Stratum Discord server](https://discord.gg/vQm6z2urZs).
+# RiftLauncher on Tauri
 
-# Welcome to RiftLauncher
+[![CI](https://github.com/StratumServer/RiftLauncher-Tauri/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/StratumServer/RiftLauncher-Tauri/actions/workflows/ci.yml)
 
-[![CI](https://github.com/StratumServer/RiftLauncher/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/StratumServer/RiftLauncher/actions/workflows/ci.yml)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=StratumServer_RiftLauncher&metric=coverage)](https://sonarcloud.io/summary/overall?id=StratumServer_RiftLauncher)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=StratumServer_RiftLauncher&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=StratumServer_RiftLauncher)
-[![Downloads](https://img.shields.io/github/downloads/StratumServer/RiftLauncher/total?logo=github&label=downloads)](https://github.com/StratumServer/RiftLauncher/releases)
-[![Latest release](https://img.shields.io/github/v/release/StratumServer/RiftLauncher?include_prereleases&logo=github&label=latest)](https://github.com/StratumServer/RiftLauncher/releases/latest)
-[![Support on OpenCollective](https://img.shields.io/badge/Support-OpenCollective-7FADF2?logo=opencollective&logoColor=white)](https://opencollective.com/stratum)
+## What this repository is
 
-## What's RiftLauncher?
+RiftLauncher's front end, running on a Tauri v2 host instead of an Electron one. The React and TypeScript under `src/renderer` is the same code the shipping launcher runs, the pure business logic under `src/domain` is the same too, and what replaces `src/main`, `src/preload` and `src/ipc` is a small Rust binary in `src-tauri`.
 
-RiftLauncher is an independent launcher for Vintage Story, built by the [Stratum](https://github.com/StratumServer) team. The website at [riftlauncher.stratumvs.dev](https://riftlauncher.stratumvs.dev/) has the short version and the downloads.
-With it you can install multiple versions of Vintage Story, create separate installations with their own configs, mods and worlds, and manage backups, all in a few clicks. It currently works on Windows and Linux; macOS support is planned but not built yet. When enabled, Electron 44 requires macOS 13 (Ventura) or later.
+This exists to answer [RiftLauncher issue 18](https://github.com/StratumServer/RiftLauncher/issues/18): whether the launcher is better off on Tauri. The question worth answering is not whether a Tauri window opens, it is what the host has to grow back before the front is whole again. So the host here does three things, and everything else the front asks for is a stub that refuses out loud. `src/renderer/src/host/tauriApi.ts` is the honest inventory of the gap.
 
-RiftLauncher is a fork of [VS Launcher](https://github.com/XurxoMF/vs-launcher) by [XurxoMF](https://github.com/XurxoMF), archived by its original author. Everything the launcher does today started there. Thank you to XurxoMF and everyone who translated, tested and contributed to the original project; their work carries forward into this one, and the [contributors page](docs/important-info/contributors.md) credits them by name.
+The front is shared, and it is not shared symmetrically. Fixes to anything under `src/renderer` or `src/domain` belong in [StratumServer/RiftLauncher](https://github.com/StratumServer/RiftLauncher) and get cherry-picked here afterwards. A fix that lands here first is a fix that will be lost the next time the two are reconciled. What is genuinely this repository's own is `src-tauri`, the build configuration, and `tauriApi.ts`.
 
-Since the fork, the project has gone through a large rebuild under the hood: a testable domain layer separate from the UI, continuous integration building on Windows and Linux, well over a thousand automated tests, and typed error reporting on every user-facing flow.
+## What works and what does not
+
+The host reads and writes `config.json`, lists the installations that config names, and starts the game. That last one honours the installation's data folder, start parameters, environment variables, Mesa GL thread setting and Linux launch wrapper, and refuses any path outside the folders the config manages.
+
+Everything else is missing: no mod scanning or installing, no downloads, no extraction or compression, no backups, no account login, no folder picker, no self-update, no custom icons or backgrounds, and nothing reaches the network. The launcher starts and its config survives a restart. It cannot yet install a version to start.
+
+## Building it
+
+Node 22 and a stable Rust toolchain. On Linux the host links against WebKitGTK 4.1, GTK 3, libsoup3 and librsvg, which `.github/workflows/ci.yml` lists by package name.
+
+```
+npm ci
+npm run tauri:dev      # the app, against the vite dev server
+npm run tauri:build    # AppImage, deb and rpm under src-tauri/target/release/bundle
+```
+
+The checks are `npm run typecheck`, `npm run lint:ci`, `npm run format:check` and `npx vitest run` on the front, and `cargo fmt --check`, `cargo clippy -- -D warnings` and `cargo test` inside `src-tauri`.
+
+## What RiftLauncher is
+
+RiftLauncher is an independent launcher for Vintage Story, built by the [Stratum](https://github.com/StratumServer) team. It installs multiple versions of the game, keeps separate installations with their own configs, mods and worlds, and manages backups. It works on Windows and Linux; macOS is planned and not built.
+
+RiftLauncher is a fork of [VS Launcher](https://github.com/XurxoMF/vs-launcher) by [XurxoMF](https://github.com/XurxoMF), archived by its original author. Everything the launcher does today started there, and the [contributors page](docs/important-info/contributors.md) credits by name everyone who translated, tested and contributed to the original project.
 
 RiftLauncher is unofficial and not affiliated with Anego Studios, the developers of [Vintage Story](https://www.vintagestory.at).
-
-## What does RiftLauncher provide?
-
-- Install multiple Vintage Story versions with one click.
-- Create multiple Installations (data paths) with one click to have different mods, worlds and so on on each one.
-- Make manual and automatic backups of your installations to not loose any of your worlds or configs if something breaks.
-- There are a lot of languages you can choose to use on RiftLauncher.
-- RiftLauncher checks for its own updates when you open it and asks before downloading one.
-
-## How can I download RiftLauncher?
-
-You can find a guide explaining how to download it here: [How to install RiftLauncher](docs/get-started/installation/README.md).
 
 ## How does RiftLauncher handle privacy?
 
 Read the [RiftLauncher Privacy Policy](PRIVACY.md) for the data the launcher stores locally and the external services it contacts.
 
-## How do I use RiftLauncher?
-
-We've made a little tutorial on how to use RiftLauncher here: [How to use RiftLauncher](docs/get-started/usage/README.md).
-
 ## Can I translate RiftLauncher to another language?
 
-Yes, thanks to i18n you can translate it to any language. Here is the guide: [How to translate RiftLauncher](docs/get-started/translation/README.md).
+Yes. The locale files under `src/renderer/src/locales` are shared with [StratumServer/RiftLauncher](https://github.com/StratumServer/RiftLauncher), so a translation belongs there rather than here.
 
 ## Where can I ask for help?
 
@@ -55,7 +53,7 @@ You can ask anything you need on our [Discord server](https://discord.gg/vQm6z2u
 
 ## Where can I report bugs?
 
-You can report any bug on the [RiftLauncher GitHub Issues](https://github.com/StratumServer/RiftLauncher/issues) or our [Discord server](https://discord.gg/vQm6z2urZs).
+A bug in the launcher itself goes on the [RiftLauncher issues](https://github.com/StratumServer/RiftLauncher/issues). A bug in this host goes on the [RiftLauncher-Tauri issues](https://github.com/StratumServer/RiftLauncher-Tauri/issues).
 
 ## Can I make a suggestion?
 

@@ -110,7 +110,17 @@ jobs:
       # The CLI comes from the @tauri-apps/cli devDependency, so the bundle is
       # built by the same version the lockfile pins rather than by whatever a
       # separate cargo install happened to fetch.
+      #
+      # NO_STRIP is not an optimisation choice. linuxdeploy ships its own old
+      # binutils, and that strip cannot read the .relr.dyn section modern
+      # linkers put in the system libraries it copies into the AppDir; it fails
+      # the whole AppImage rather than skipping the library. Reproduced on a
+      # rolling-release host, where every bundle run died on it. The cost is an
+      # AppImage carrying unstripped copies of libraries it was going to carry
+      # either way.
       - run: npm run tauri -- build
+        env:
+          NO_STRIP: true
 
       - uses: actions/upload-artifact@v4
         with:
